@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Emotion Aware AI </title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="static\css\style.css">
+</head>
+<body>
+
+<div class="container">
+
+  <div class="orb-wrapper">
+    <div class="orb-ring"></div>
+    <div class="orb"></div>
+  </div>
+
+  <div class="heading">
+    <h1>EMOTION AWARE AI CHATBOT</h1>
+    <p>Welcome!</p>
+  </div>
+
+  <div id="chat-history">
+    <div class="msg bot-msg">Hello, How are you feeling today?</div>
+  </div>
+
+  <div class="input-outer">
+    <input type="text" id="user-input" placeholder="Type your message..." autocomplete="off" enterkeyhint="send"/>
+    <button class="btn-send" id="send-btn" onclick="sendMessage()" title="Send">
+      <svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
+    </button>
+  </div>
+
+</div>
+
+<script>
+  const chatHistory = document.getElementById('chat-history');
+  const userInput   = document.getElementById('user-input');
+  const sendBtn     = document.getElementById('send-btn');
+
+  function scrollToBottom() {
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+  }
+
+  function appendMessage(html, className) {
+    const div = document.createElement('div');
+    div.className = `msg ${className}`;
+    div.innerHTML = html;
+    chatHistory.appendChild(div);
+    scrollToBottom();
+    return div;
+  }
+
+  function showTyping() {
+    const div = document.createElement('div');
+    div.className = 'typing-indicator';
+    div.id = 'typing';
+    div.innerHTML = '<span></span><span></span><span></span>';
+    chatHistory.appendChild(div);
+    scrollToBottom();
+  }
+
+  function hideTyping() {
+    const el = document.getElementById('typing');
+    if (el) el.remove();
+  }
+
+  async function sendMessage() {
+    const text = userInput.value.trim();
+    if (!text) return;
+
+    appendMessage(text, 'user-msg');
+    userInput.value = '';
+    sendBtn.disabled = true;
+    showTyping();
+
+    try {
+      const response = await fetch('/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      const data = await response.json();
+      hideTyping();
+      appendMessage(
+        `<span class="emotion-badge">${data.emotion} (${data.confidence})</span>${data.reply}`,
+        'bot-msg'
+      );
+    } catch (err) {
+      hideTyping();
+      appendMessage('⚠️ Could not reach the server. Please try again.', 'bot-msg');
+      console.error('Error:', err);
+    } finally {
+      sendBtn.disabled = false;
+      userInput.focus();
+    }
+  }
+
+  userInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendMessage();
+  });
+
+  window.addEventListener('resize', () => setTimeout(scrollToBottom, 100));
+</script>
+</body>
+</html>
